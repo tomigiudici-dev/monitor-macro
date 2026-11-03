@@ -36,3 +36,7 @@ python -m http.server --directory docs
 - Las variaciones de inflación y de actividad son las que publica el INDEC.
 - El salario real es el índice de salarios de cada sector dividido por el IPC nacional, con base diciembre de 2016 = 100.
 - La desocupación es la tasa trimestral de la EPH para el total de 31 aglomerados urbanos.
+
+## Tipografías
+
+Archivo, Chivo y Chivo Mono, de Omnibus-Type, con licencia SIL Open Font License. La página las carga desde Google Fonts y el generador de imágenes usa las copias de `scripts/fuentes/`, junto con sus licencias.
