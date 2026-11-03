@@ -45,10 +45,10 @@ jobs:
           cat salida.txt
           if [ "$codigo" -ne 0 ]; then
             # Primera línea útil del error, para que se vea en el resumen de la ejecución.
-            detalle=$(grep -E "HTTP [0-9]{3}|Sin conexión|Falta el token|Error" salida.txt | head -n 1 | cut -c1-300)
+            detalle=$(grep -E "HTTP [0-9]{3}|Sin conexión|Falta el token|Token inválido|Error" salida.txt | head -n 1 | cut -c1-300)
             [ -z "$detalle" ] && detalle=$(tail -n 1 salida.txt | cut -c1-300)
             detalle=${detalle//%/%25}
-            if grep -qE "HTTP 401|Falta el token" salida.txt; then
+            if grep -qE "HTTP 401|Falta el token|Token inválido" salida.txt; then
               echo "::error::El token del INDEC falta, venció o es inválido. Generá uno nuevo en api.indec.gob.ar y actualizá el secreto INDEC_TOKEN. Detalle: $detalle"
               exit 1
             fi

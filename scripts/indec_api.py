@@ -70,9 +70,13 @@ def consultar(tabla, filtros=None, select=None, order=None, token=None, max_fila
     filtros: dict estilo PostgREST, ej. {"anio": "gte.2024", "region": "eq.Nacional"}
     order:   si no se indica, usa la clave completa de la tabla (orden estable para paginar).
     """
-    token = token or os.environ.get("INDEC_TOKEN") or _token_archivo()
+    # Un token pegado a mano suele traer espacios o un salto de línea al final.
+    token = (token or os.environ.get("INDEC_TOKEN") or "").strip().lstrip("﻿") or _token_archivo()
     if not token:
         raise SystemExit("Falta el token: definí INDEC_TOKEN o guardalo en ~/indec_token.txt.")
+    if not re.fullmatch(r"[\w-]+\.[\w-]+\.[\w-]+", token, re.ASCII):
+        # No se muestra el token: el mensaje puede terminar en un registro público.
+        raise SystemExit("Token inválido: no tiene el formato esperado (tres partes separadas por puntos).")
     if order is None:
         order = tablas().get(tabla, ("", ""))[1] or None
 
