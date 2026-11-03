@@ -38,6 +38,9 @@ def _request(url, token=None, headers=None):
     except urllib.error.HTTPError as e:
         body = e.read().decode("utf-8", "replace")
         raise SystemExit(f"HTTP {e.code} en {url}\n{body}") from None
+    except OSError as e:  # sin conexión, conexión cortada o tiempo agotado
+        motivo = getattr(e, "reason", None) or e
+        raise SystemExit(f"Sin conexión con {url}: {motivo}") from None
 
 
 def spec():

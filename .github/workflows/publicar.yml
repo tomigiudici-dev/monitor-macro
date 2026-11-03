@@ -24,7 +24,7 @@ jobs:
     steps:
       # Siempre la punta de main: cuando lo llama "Actualizar datos", el commit con los datos nuevos
       # es posterior al que disparó la ejecución.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           ref: main
 
