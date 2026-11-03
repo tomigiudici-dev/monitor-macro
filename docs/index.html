@@ -1,0 +1,585 @@
+<!doctype html>
+<html lang="es-AR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Monitor Macro</title>
+<meta name="description" content="Inflación, salario real, actividad y desocupación en la Argentina, con datos oficiales del INDEC que se actualizan solos.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Monitor Macro">
+<meta property="og:description" content="Inflación, salario real, actividad y desocupación con datos del INDEC, actualizados con cada publicación.">
+<meta property="og:url" content="https://tomigiudici-dev.github.io/monitor-macro/">
+<meta property="og:image" content="https://tomigiudici-dev.github.io/monitor-macro/img/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://tomigiudici-dev.github.io/monitor-macro/img/og.png">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%231d5c96'/%3E%3Cpath d='M7 22l6-7 5 4 7-9' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+  /* Layout: una columna centrada; cifras arriba, gráficos en grilla 2x2, material para compartir al final. */
+  :root {
+    --bg: #f4f6f9; --panel: #ffffff; --ink: #132231; --muted: #5b6b7b;
+    --line: #dce2e8; --grid: #e8ecf1; --axis: #b6c0ca; --guide: #9aa8b5;
+    --accent: #1d5c96; --accent-soft: #e3edf7;
+    --s1: #1d5c96; --s2: #d0682a; --s3: #2b8566; --s4: #8656bf;
+    --good: #1c7547; --bad: #b3362f;
+    --pop: #ffffff; --shadow: 0 8px 24px rgba(19, 34, 49, .14);
+    --f-text: "Public Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --f-num: "Source Serif 4", Georgia, "Times New Roman", serif;
+    --r: 10px;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0e151d; --panel: #151f2a; --ink: #e5ecf2; --muted: #9babba;
+      --line: #263443; --grid: #1e2a37; --axis: #3b4b5b; --guide: #5d6f80;
+      --accent: #6ba7de; --accent-soft: #1b2d40;
+      --s1: #6ba7de; --s2: #ee9658; --s3: #5cc39d; --s4: #b593e8;
+      --good: #5fca91; --bad: #f08a80;
+      --pop: #1b2733; --shadow: 0 8px 24px rgba(0, 0, 0, .45);
+      color-scheme: dark;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 400 16px/1.5 var(--f-text); }
+  .wrap { max-width: 72rem; margin-inline: auto; padding-block: 2rem 3rem; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 2rem; }
+  a { color: var(--accent); }
+  a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .head { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 1rem 2rem; }
+  .head > div { flex: 1 1 26rem; min-width: 0; }
+  .kicker { margin: 0 0 .25rem; font-size: .8rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+  h1 { margin: 0; font: 600 clamp(2rem, 5vw, 2.75rem)/1.1 var(--f-num); letter-spacing: -.01em; text-wrap: balance; }
+  .lede { margin: .5rem 0 0; max-width: 62ch; color: var(--muted); font-size: 1.05rem; }
+  .lede b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+  .range { display: inline-flex; border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; background: var(--panel); }
+  .range button { font: inherit; font-size: .85rem; padding: .4rem .8rem; border: 0; background: transparent; color: var(--muted); cursor: pointer; }
+  .range button + button { border-left: 1px solid var(--line); }
+  .range button[aria-pressed="true"] { background: var(--accent-soft); color: var(--ink); font-weight: 600; }
+
+  .kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem; }
+  @media (max-width: 60rem) { .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 26rem) { .kpis { grid-template-columns: 1fr; } }
+  .kpi { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 1.1rem 1.2rem; display: grid; gap: .2rem; align-content: start; min-width: 0; }
+  .kpi h2 { margin: 0; font-size: .8rem; font-weight: 600; color: var(--muted); }
+  .kpi .big { margin: .1rem 0 .35rem; font: 400 2.6rem/1.05 var(--f-num); font-variant-numeric: tabular-nums; }
+  .kpi p { margin: 0; font-size: .82rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .delta { font-weight: 600; color: var(--ink); }
+  .good { color: var(--good); }
+  .bad { color: var(--bad); }
+
+  .charts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+  @media (max-width: 52rem) { .charts { grid-template-columns: 1fr; } }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 1.1rem 1.2rem; min-width: 0; display: grid; gap: .2rem; align-content: start; }
+  .card h2 { margin: 0; font-size: 1.05rem; font-weight: 600; }
+  .note { margin: 0 0 .6rem; font-size: .82rem; color: var(--muted); }
+  .chart { position: relative; min-height: 240px; }
+  .chart svg { display: block; overflow: visible; }
+  .chart text { font-family: var(--f-text); font-size: 12px; font-variant-numeric: tabular-nums; }
+  .tick { fill: var(--muted); }
+  .end { font-weight: 600; }
+  .gridline { stroke: var(--grid); stroke-width: 1; }
+  .zero { stroke: var(--axis); stroke-width: 1; }
+  .guide { stroke: var(--guide); stroke-width: 1; stroke-dasharray: 3 3; }
+  .msg { display: flex; align-items: center; justify-content: center; min-height: 240px; color: var(--muted); font-size: .85rem; }
+
+  .tip { position: absolute; z-index: 2; display: grid; gap: 2px; min-width: 9.5rem; white-space: nowrap; pointer-events: none; background: var(--pop); border: 1px solid var(--line); border-radius: 8px; box-shadow: var(--shadow); padding: .4rem .6rem; font-size: .78rem; }
+  .tip[hidden] { display: none; }
+  .tip-head { color: var(--muted); }
+  .tip-row { display: flex; align-items: center; gap: .4rem; }
+  .tip-row b { margin-left: auto; padding-left: .8rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .sw { flex: none; width: .55rem; height: .55rem; border-radius: 50%; }
+
+  .share h2.section { margin: 0 0 .25rem; font: 600 1.4rem/1.2 var(--f-num); }
+  .share > p { margin: 0 0 1rem; color: var(--muted); max-width: 62ch; }
+  .posts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+  @media (max-width: 52rem) { .posts { grid-template-columns: 1fr; } }
+  .post { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; display: grid; min-width: 0; }
+  .post img { display: block; width: 100%; max-width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover; border-bottom: 1px solid var(--line); background: var(--grid); }
+  .post-body { padding: 1rem 1.2rem 1.1rem; display: grid; gap: .75rem; }
+  .post-text { margin: 0; white-space: pre-line; font-size: .9rem; overflow-wrap: anywhere; }
+  .actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+  .btn { font: inherit; font-size: .82rem; font-weight: 600; padding: .45rem .8rem; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); text-decoration: none; cursor: pointer; }
+  .btn:hover { border-color: var(--accent); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--panel); }
+
+  footer { border-top: 1px solid var(--line); padding-top: 1.25rem; font-size: .82rem; color: var(--muted); display: grid; gap: .5rem; max-width: 80ch; }
+  footer p { margin: 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="head">
+    <div>
+      <p class="kicker">Datos del INDEC · <span data-k="actualizado">—</span></p>
+      <h1>Monitor Macro</h1>
+      <p class="lede">En <span data-k="ipc-mes">—</span> la inflación mensual <span data-k="infl-verbo">—</span> <b data-k="infl-m">—</b> y la interanual fue <b data-k="infl-a">—</b>.</p>
+    </div>
+    <div class="range" role="group" aria-label="Período de los gráficos">
+      <button type="button" data-rango="3a" aria-pressed="true">Últimos 3 años</button>
+      <button type="button" data-rango="todo" aria-pressed="false">Desde 2017</button>
+    </div>
+  </header>
+
+  <section class="kpis" aria-label="Últimos datos">
+    <article class="kpi">
+      <h2>Inflación mensual · <span data-k="ipc-mes">—</span></h2>
+      <p class="big" data-k="infl-m">—</p>
+      <p><span data-k="infl-a">—</span> en los últimos doce meses</p>
+      <p><span class="delta" data-k="infl-dif">—</span> contra el mes anterior</p>
+    </article>
+    <article class="kpi">
+      <h2>Salario real · <span data-k="sal-mes">—</span></h2>
+      <p class="big" data-k="sal-a">—</p>
+      <p>Variación en doce meses, descontada la inflación</p>
+      <p><span class="delta" data-k="sal-m">—</span> contra el mes anterior</p>
+    </article>
+    <article class="kpi">
+      <h2>Actividad económica · <span data-k="emae-mes">—</span></h2>
+      <p class="big" data-k="emae-a">—</p>
+      <p>Variación interanual del EMAE</p>
+      <p><span class="delta" data-k="emae-m">—</span> contra el mes anterior, sin estacionalidad</p>
+    </article>
+    <article class="kpi">
+      <h2>Desocupación · <span data-k="desoc-trim">—</span></h2>
+      <p class="big" data-k="desoc">—</p>
+      <p>Población activa sin trabajo, 31 aglomerados urbanos</p>
+      <p><span class="delta" data-k="desoc-dif">—</span> contra un año antes</p>
+    </article>
+  </section>
+
+  <section class="charts" aria-label="Evolución">
+    <article class="card" id="inflacion">
+      <h2>Inflación mensual</h2>
+      <p class="note">Variación del IPC nacional, nivel general, contra el mes anterior.</p>
+      <div class="chart" data-chart="infl"></div>
+    </article>
+    <article class="card" id="salario-real">
+      <h2>Salario real por sector</h2>
+      <p class="note">Índice de salarios dividido por el IPC. Diciembre de 2016 = 100.</p>
+      <div class="chart" data-chart="sal"></div>
+    </article>
+    <article class="card" id="actividad">
+      <h2>Actividad económica (EMAE)</h2>
+      <p class="note">Estimador mensual de actividad, serie desestacionalizada. Base 2004 = 100.</p>
+      <div class="chart" data-chart="emae"></div>
+    </article>
+    <article class="card" id="desocupacion">
+      <h2>Desocupación</h2>
+      <p class="note">Tasa trimestral de la EPH, en porcentaje de la población económicamente activa.</p>
+      <div class="chart" data-chart="desoc"></div>
+    </article>
+  </section>
+
+  <section class="share" id="compartir" aria-labelledby="compartir-titulo">
+    <h2 class="section" id="compartir-titulo">Para compartir</h2>
+    <p>Imágenes y textos listos para publicar en X. Se regeneran solos cada vez que el INDEC publica un dato nuevo.</p>
+    <div class="posts" data-posts></div>
+  </section>
+
+  <footer>
+    <p>Fuente: INDEC, Catálogo API-INDEC (servicio en etapa beta). Las variaciones de inflación y de actividad son las que publica el INDEC. El salario real se calcula dividiendo el índice de salarios por el IPC. Las diferencias de desocupación e inflación entre períodos están en puntos porcentuales (p.p.).</p>
+    <p>Sitio independiente, sin relación con el INDEC. Los datos se actualizan solos los días hábiles a la tarde. <a href="https://github.com/tomigiudici-dev/monitor-macro">Código y datos en GitHub</a>.</p>
+  </footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+<script>
+(() => {
+  const loc = d3.formatLocale({ decimal: ',', thousands: '.', grouping: [3], currency: ['$', ''], minus: '−' });
+  const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+  const nulo = (f) => (v) => (v == null || Number.isNaN(v) ? '—' : f(v));
+  const fmt = {
+    pct: nulo(loc.format('.1%')),
+    spct: nulo(loc.format('+.1%')),
+    num: nulo(loc.format(',.1f')),
+    pp: nulo((v) => (v > 0 ? '+' : v < 0 ? '−' : '') + loc.format('.1f')(Math.abs(v * 100)) + ' p.p.'),
+    mes: (f) => { const [y, m] = f.split('-'); return `${MESES[m - 1]} ${y}`; },
+    trim: (f) => { const [y, m] = f.split('-'); return `${Math.ceil(m / 3)}.º trim. ${y}`; },
+  };
+  const ejePct = (paso) => loc.format(`.${d3.precisionFixed(paso * 100)}%`);
+  const ejeNum = (paso) => loc.format(`,.${d3.precisionFixed(paso)}f`);
+  const tono = (v, mejorSiSube) => (v == null || v === 0 ? null : (v > 0) === mejorSiSube ? 'good' : 'bad');
+  const state = { rango: '3a' };
+  const recorte = (rows, n) => (state.rango === 'todo' ? rows.filter((r) => r.fecha >= '2017-01') : rows.slice(-n));
+
+  // ---- Datos ----
+  const cargar = (ruta) => fetch(ruta, { cache: 'no-cache' }).then((r) => {
+    if (!r.ok) throw new Error(`${ruta}: ${r.status}`);
+    return r.json();
+  });
+  const opcional = (ruta) => cargar(ruta).catch(() => null);
+
+  const derivar = ({ ipc, salarios, emae, desempleo }) => {
+    const inflacion = ipc.map((r) => ({
+      fecha: r.fecha,
+      mensual: r.v_m == null ? null : r.v_m / 100,
+      interanual: r.v_ia == null ? null : r.v_ia / 100,
+    }));
+    const precios = new Map(ipc.map((r) => [r.fecha, r.ipc / 100]));
+    const base = salarios.find((r) => r.fecha === '2016-12');
+    const sectores = ['total', 'privado_registrado', 'publico', 'no_registrado'];
+    const salarioReal = salarios.filter((r) => precios.has(r.fecha)).map((r) => ({
+      fecha: r.fecha,
+      ...Object.fromEntries(sectores.map((s) => [s, (r[s] / base[s] / precios.get(r.fecha)) * 100])),
+    }));
+    const actividad = emae.map((r) => ({
+      fecha: r.fecha,
+      desestacionalizada: r.desestacionalizada,
+      mensual: r.v_m == null ? null : r.v_m / 100,
+      interanual: r.v_ia == null ? null : r.v_ia / 100,
+    }));
+    const desocupacion = desempleo.map((r, i) => ({
+      fecha: r.fecha,
+      tasa: r.tasa,
+      dif: i >= 4 ? r.tasa - desempleo[i - 4].tasa : null,
+    }));
+    const ult = (rows, k = 1) => rows[rows.length - k];
+    const i = ult(inflacion), s = ult(salarioReal), a = ult(actividad), d = ult(desocupacion);
+    const kpis = {
+      ipcMes: i.fecha, inflM: i.mensual, inflA: i.interanual, inflDif: i.mensual - ult(inflacion, 2).mensual,
+      salMes: s.fecha, salA: s.total / ult(salarioReal, 13).total - 1, salM: s.total / ult(salarioReal, 2).total - 1,
+      emaeMes: a.fecha, emaeA: a.interanual, emaeM: a.mensual,
+      desocTrim: d.fecha, desoc: d.tasa, desocDif: d.dif,
+    };
+    return { inflacion, salarioReal, actividad, desocupacion, kpis };
+  };
+
+  const poner = (clave, texto, clase) => {
+    document.querySelectorAll(`[data-k="${clave}"]`).forEach((el) => {
+      el.textContent = texto;
+      el.classList.remove('good', 'bad');
+      if (clase) el.classList.add(clase);
+    });
+  };
+
+  const fechaLarga = (iso) => {
+    const d = new Date(iso);
+    return `actualizado el ${d.getDate()} de ${MESES[d.getMonth()]} de ${d.getFullYear()}`;
+  };
+
+  const llenarKpis = (k, meta) => {
+    poner('actualizado', meta ? fechaLarga(meta.actualizado) : 'última publicación');
+    poner('ipc-mes', fmt.mes(k.ipcMes));
+    poner('infl-verbo', k.inflDif < 0 ? 'bajó a' : k.inflDif > 0 ? 'subió a' : 'se mantuvo en');
+    poner('infl-m', fmt.pct(k.inflM));
+    poner('infl-a', fmt.pct(k.inflA));
+    poner('infl-dif', fmt.pp(k.inflDif), tono(k.inflDif, false));
+    poner('sal-mes', fmt.mes(k.salMes));
+    poner('sal-a', fmt.spct(k.salA));
+    poner('sal-m', fmt.spct(k.salM), tono(k.salM, true));
+    poner('emae-mes', fmt.mes(k.emaeMes));
+    poner('emae-a', fmt.spct(k.emaeA));
+    poner('emae-m', fmt.spct(k.emaeM), tono(k.emaeM, true));
+    poner('desoc-trim', fmt.trim(k.desocTrim));
+    poner('desoc', fmt.pct(k.desoc));
+    poner('desoc-dif', fmt.pp(k.desocDif), tono(k.desocDif, false));
+  };
+
+  // ---- Gráficos ----
+  const H = 240, ABAJO = H - 24, ARRIBA = 10;
+  const parse = d3.utcParse('%Y-%m');
+  const medir = (svg, textos, clase) => {
+    const t = svg.append('text').attr('class', clase);
+    let w = 0;
+    for (const s of textos) { t.text(s); w = Math.max(w, t.node().getComputedTextLength()); }
+    t.remove();
+    return w;
+  };
+
+  const grafico = (el, cfg) => {
+    const { rows, series, tipo } = cfg;
+    el.replaceChildren();
+    const W = Math.max(280, el.clientWidth || 600);
+    const svg = d3.select(el).append('svg')
+      .attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`)
+      .attr('role', 'img').attr('aria-label', cfg.etiqueta);
+
+    const vals = rows.flatMap((r) => series.map((s) => r[s.key])).filter((v) => v != null);
+    let lo = d3.min(vals), hi = d3.max(vals);
+    if (cfg.base0) { lo = Math.min(0, lo); hi = Math.max(0, hi); }
+    else { const pad = (hi - lo) * 0.08 || 1; lo -= pad; hi += pad; }
+    const y = d3.scaleLinear([lo, hi], [ABAJO, ARRIBA]).nice(5);
+    const ticks = y.ticks(5);
+    const fmtTick = cfg.eje(ticks.length > 1 ? ticks[1] - ticks[0] : 1);
+
+    const ml = Math.ceil(medir(svg, ticks.map(fmtTick), 'tick')) + 10;
+    const ult = rows[rows.length - 1];
+    const finales = tipo === 'lineas' ? series.map((s) => `${s.label} ${cfg.fmtVal(ult[s.key])}`) : [];
+    const mr = finales.length ? Math.ceil(medir(svg, finales, 'end')) + 14 : 16;
+    const x0 = ml, x1 = W - mr;
+
+    const fechas = rows.map((r) => r.fecha);
+    let xpos, bw = 0;
+    if (tipo === 'barras') {
+      const xb = d3.scaleBand(fechas, [x0, x1]).paddingInner(0.25).paddingOuter(0.1);
+      bw = xb.bandwidth();
+      xpos = (f) => xb(f) + bw / 2;
+    } else {
+      const xu = d3.scaleUtc(d3.extent(fechas, parse), [x0, x1]);
+      xpos = (f) => xu(parse(f));
+    }
+
+    const ejes = svg.append('g');
+    ejes.selectAll('line').data(ticks).join('line')
+      .attr('class', (t) => (t === 0 && cfg.base0 ? 'zero' : 'gridline'))
+      .attr('x1', x0).attr('x2', x1).attr('y1', (t) => y(t)).attr('y2', (t) => y(t));
+    ejes.selectAll('text.ty').data(ticks).join('text')
+      .attr('class', 'tick ty').attr('x', x0 - 8).attr('y', (t) => y(t))
+      .attr('dy', '0.32em').attr('text-anchor', 'end').text(fmtTick);
+    const anios = fechas.filter((f) => f.endsWith('-01'));
+    const anchoAnio = medir(svg, ['2026'], 'tick') + 14;
+    const paso = Math.max(1, Math.ceil((anchoAnio * anios.length) / (x1 - x0)));
+    ejes.selectAll('text.tx').data(anios.filter((_, i) => i % paso === 0)).join('text')
+      .attr('class', 'tick tx').attr('x', xpos).attr('y', H - 6)
+      .attr('text-anchor', 'middle').text((f) => f.slice(0, 4));
+
+    const marcas = svg.append('g');
+    if (tipo === 'barras') {
+      const s = series[0];
+      marcas.selectAll('rect').data(rows).join('rect')
+        .attr('class', 'bar')
+        .attr('x', (r) => xpos(r.fecha) - bw / 2).attr('width', bw)
+        .attr('y', (r) => y(Math.max(0, r[s.key] ?? 0)))
+        .attr('height', (r) => Math.abs(y(r[s.key] ?? 0) - y(0)))
+        .attr('rx', Math.min(2, bw / 2))
+        .style('fill', s.color);
+    } else {
+      series.forEach((s, i) => {
+        const def = (r) => r[s.key] != null;
+        if (cfg.area && i === 0) {
+          const id = `grad-${cfg.id}`;
+          const grad = svg.append('defs').append('linearGradient')
+            .attr('id', id).attr('x1', 0).attr('x2', 0).attr('y1', 0).attr('y2', 1);
+          [[0, 0.26], [0.25, 0.16], [0.5, 0.08], [0.75, 0.03], [1, 0]].forEach(([o, a]) =>
+            grad.append('stop').attr('offset', o).attr('style', `stop-color: ${s.color}; stop-opacity: ${a}`));
+          const area = d3.area().defined(def).x((r) => xpos(r.fecha)).y0(y(y.domain()[0])).y1((r) => y(r[s.key]));
+          marcas.append('path').attr('d', area(rows)).style('fill', `url(#${id})`);
+        }
+        const linea = d3.line().defined(def).x((r) => xpos(r.fecha)).y((r) => y(r[s.key]));
+        marcas.append('path').attr('d', linea(rows))
+          .style('fill', 'none').style('stroke', s.color).attr('stroke-width', s.ancho || 2)
+          .attr('stroke-linejoin', 'round').attr('stroke-linecap', 'round');
+        if (ult[s.key] != null) {
+          marcas.append('circle').attr('cx', xpos(ult.fecha)).attr('cy', y(ult[s.key])).attr('r', 3).style('fill', s.color);
+        }
+      });
+      const rot = series.map((s, i) => ({ s, texto: finales[i], y: y(ult[s.key] ?? lo) })).sort((a, b) => a.y - b.y);
+      for (let i = 1; i < rot.length; i++) rot[i].y = Math.max(rot[i].y, rot[i - 1].y + 14);
+      const sobra = rot.length ? rot[rot.length - 1].y - ABAJO : 0;
+      if (sobra > 0) rot.forEach((r) => { r.y -= sobra; });
+      svg.append('g').selectAll('text').data(rot).join('text')
+        .attr('class', 'end').attr('x', x1 + 8).attr('y', (r) => r.y).attr('dy', '0.32em')
+        .style('fill', (r) => r.s.color).text((r) => r.texto);
+    }
+
+    const tip = document.createElement('div');
+    tip.className = 'tip';
+    tip.hidden = true;
+    el.append(tip);
+    const guia = svg.append('line').attr('class', 'guide').attr('y1', ARRIBA).attr('y2', ABAJO).style('visibility', 'hidden');
+    const puntos = tipo === 'lineas'
+      ? svg.append('g').selectAll('circle').data(series).join('circle').attr('r', 4).style('fill', (s) => s.color).style('visibility', 'hidden')
+      : null;
+    const xs = rows.map((r) => xpos(r.fecha));
+    const salir = () => {
+      tip.hidden = true;
+      guia.style('visibility', 'hidden');
+      if (puntos) puntos.style('visibility', 'hidden');
+      marcas.selectAll('.bar').attr('opacity', 1);
+    };
+    svg.append('rect')
+      .attr('x', x0).attr('y', 0).attr('width', Math.max(0, x1 - x0)).attr('height', H)
+      .style('fill', 'transparent')
+      .on('pointermove', (ev) => {
+        const [mx] = d3.pointer(ev);
+        const i = d3.leastIndex(xs, (v) => Math.abs(v - mx));
+        const r = rows[i];
+        if (tipo === 'barras') {
+          marcas.selectAll('.bar').attr('opacity', (_, j) => (j === i ? 1 : 0.45));
+        } else {
+          guia.attr('x1', xs[i]).attr('x2', xs[i]).style('visibility', 'visible');
+          puntos.attr('cx', xs[i]).attr('cy', (s) => y(r[s.key] ?? lo))
+            .style('visibility', (s) => (r[s.key] == null ? 'hidden' : 'visible'));
+        }
+        const cab = document.createElement('div');
+        cab.className = 'tip-head';
+        cab.textContent = cfg.fmtX(r.fecha);
+        const filas = cfg.tip(r).map(([nombre, valor, color]) => {
+          const fila = document.createElement('div');
+          fila.className = 'tip-row';
+          if (color) {
+            const sw = document.createElement('span');
+            sw.className = 'sw';
+            sw.style.background = color;
+            fila.append(sw);
+          }
+          const a = document.createElement('span');
+          a.textContent = nombre;
+          const b = document.createElement('b');
+          b.textContent = valor;
+          fila.append(a, b);
+          return fila;
+        });
+        tip.replaceChildren(cab, ...filas);
+        tip.hidden = false;
+        const escala = el.clientWidth / W;
+        const px = xs[i] * escala;
+        const tw = tip.offsetWidth;
+        const izq = px + 12 + tw > el.clientWidth ? px - 12 - tw : px + 12;
+        tip.style.left = `${Math.max(0, izq)}px`;
+        tip.style.top = '8px';
+      })
+      .on('pointerleave', salir);
+  };
+
+  const SECTORES = [
+    { key: 'total', label: 'Total', nombre: 'Total', color: 'var(--s1)', ancho: 2.5 },
+    { key: 'privado_registrado', label: 'Priv. reg.', nombre: 'Privado registrado', color: 'var(--s2)' },
+    { key: 'publico', label: 'Público', nombre: 'Público', color: 'var(--s3)' },
+    { key: 'no_registrado', label: 'No reg.', nombre: 'No registrado', color: 'var(--s4)' },
+  ];
+
+  const dibujos = {
+    infl: (el, d) => grafico(el, {
+      id: 'infl', tipo: 'barras', base0: true, etiqueta: 'Inflación mensual',
+      rows: recorte(d.inflacion.filter((r) => r.mensual != null), 36),
+      series: [{ key: 'mensual', color: 'var(--s1)' }],
+      eje: ejePct, fmtX: fmt.mes,
+      tip: (r) => [['Mensual', fmt.pct(r.mensual)], ['Interanual', fmt.pct(r.interanual)]],
+    }),
+    sal: (el, d) => grafico(el, {
+      id: 'sal', tipo: 'lineas', etiqueta: 'Salario real por sector',
+      rows: recorte(d.salarioReal, 36), series: SECTORES,
+      eje: ejeNum, fmtVal: fmt.num, fmtX: fmt.mes,
+      tip: (r) => SECTORES.map((s) => [s.nombre, fmt.num(r[s.key]), s.color]),
+    }),
+    emae: (el, d) => grafico(el, {
+      id: 'emae', tipo: 'lineas', area: true, etiqueta: 'EMAE desestacionalizado',
+      rows: recorte(d.actividad, 36),
+      series: [{ key: 'desestacionalizada', label: 'EMAE', color: 'var(--s1)' }],
+      eje: ejeNum, fmtVal: fmt.num, fmtX: fmt.mes,
+      tip: (r) => [['Índice', fmt.num(r.desestacionalizada)], ['Mensual', fmt.spct(r.mensual)], ['Interanual', fmt.spct(r.interanual)]],
+    }),
+    desoc: (el, d) => grafico(el, {
+      id: 'desoc', tipo: 'barras', base0: true, etiqueta: 'Tasa de desocupación',
+      rows: recorte(d.desocupacion, 12),
+      series: [{ key: 'tasa', color: 'var(--s1)' }],
+      eje: ejePct, fmtX: fmt.trim,
+      tip: (r) => [['Tasa', fmt.pct(r.tasa)], ['Contra un año antes', fmt.pp(r.dif)]],
+    }),
+  };
+
+  const dibujarTodo = (d) => {
+    document.querySelectorAll('[data-chart]').forEach((el) => dibujos[el.dataset.chart](el, d));
+  };
+
+  // ---- Para compartir ----
+  const armarPosts = (textos) => {
+    const cont = document.querySelector('[data-posts]');
+    if (!cont) return;
+    if (!textos || !textos.items || !textos.items.length) {
+      cont.closest('section').hidden = true;
+      return;
+    }
+    cont.replaceChildren(...textos.items.map((it) => {
+      const card = document.createElement('article');
+      card.className = 'post';
+      const img = document.createElement('img');
+      img.src = `${it.imagen}?v=${encodeURIComponent(textos.generado)}`;
+      img.alt = it.alt;
+      img.loading = 'lazy';
+      img.width = 1200;
+      img.height = 675;
+      const body = document.createElement('div');
+      body.className = 'post-body';
+      const p = document.createElement('p');
+      p.className = 'post-text';
+      p.textContent = it.texto;
+      const acciones = document.createElement('div');
+      acciones.className = 'actions';
+      const copiar = document.createElement('button');
+      copiar.type = 'button';
+      copiar.className = 'btn';
+      copiar.textContent = 'Copiar texto';
+      copiar.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(it.texto);
+          copiar.textContent = 'Copiado';
+        } catch {
+          const rango = document.createRange();
+          rango.selectNodeContents(p);
+          const sel = window.getSelection();
+          sel.removeAllRanges();
+          sel.addRange(rango);
+          copiar.textContent = 'Texto seleccionado';
+        }
+        setTimeout(() => { copiar.textContent = 'Copiar texto'; }, 2000);
+      });
+      const bajar = document.createElement('a');
+      bajar.className = 'btn';
+      bajar.href = it.imagen;
+      bajar.download = it.imagen.split('/').pop();
+      bajar.textContent = 'Descargar imagen';
+      const publicar = document.createElement('a');
+      publicar.className = 'btn primary';
+      publicar.href = `https://x.com/intent/post?text=${encodeURIComponent(it.texto)}`;
+      publicar.target = '_blank';
+      publicar.rel = 'noopener';
+      publicar.textContent = 'Publicar en X';
+      acciones.append(copiar, bajar, publicar);
+      body.append(p, acciones);
+      card.append(img, body);
+      return card;
+    }));
+  };
+
+  // ---- Arranque ----
+  const mostrarError = () => {
+    document.querySelectorAll('[data-chart]').forEach((el) => {
+      const m = document.createElement('div');
+      m.className = 'msg';
+      m.textContent = 'No se pudieron cargar los datos. Probá recargar la página.';
+      el.replaceChildren(m);
+    });
+  };
+
+  Promise.all([
+    cargar('data/ipc.json'), cargar('data/salarios.json'), cargar('data/emae.json'), cargar('data/desempleo.json'),
+    opcional('data/meta.json'), opcional('x/textos.json'),
+  ]).then(([ipc, salarios, emae, desempleo, meta, textos]) => {
+    const d = derivar({ ipc, salarios, emae, desempleo });
+    llenarKpis(d.kpis, meta);
+    dibujarTodo(d);
+    armarPosts(textos);
+
+    document.querySelectorAll('.range button').forEach((b) => {
+      b.addEventListener('click', () => {
+        state.rango = b.dataset.rango;
+        document.querySelectorAll('.range button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+        dibujarTodo(d);
+      });
+    });
+
+    const anchos = new WeakMap();
+    const ro = new ResizeObserver((entradas) => {
+      for (const e of entradas) {
+        const w = Math.round(e.contentRect.width);
+        if (anchos.get(e.target) !== w) {
+          const habia = anchos.has(e.target);
+          anchos.set(e.target, w);
+          if (habia) dibujos[e.target.dataset.chart](e.target, d);
+        }
+      }
+    });
+    document.querySelectorAll('[data-chart]').forEach((el) => ro.observe(el));
+  }).catch((err) => {
+    console.error(err);
+    mostrarError();
+  });
+})();
+</script>
+</body>
+</html>

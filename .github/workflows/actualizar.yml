@@ -1,0 +1,89 @@
+name: Actualizar datos del INDEC
+
+on:
+  schedule:
+    # Días hábiles a las 16:45 y 19:45 de Argentina (UTC-3). El INDEC publica a las 16.
+    - cron: "45 19,22 * * 1-5"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: actualizar
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  actualizar:
+    runs-on: ubuntu-latest
+    outputs:
+      cambios: ${{ steps.datos.outputs.cambios }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar dependencias
+        run: pip install matplotlib==3.11.1
+
+      - name: Bajar datos del INDEC
+        id: datos
+        env:
+          INDEC_TOKEN: ${{ secrets.INDEC_TOKEN }}
+        run: |
+          set +e
+          python scripts/datos.py > salida.txt 2>&1
+          codigo=$?
+          set -e
+          cat salida.txt
+          if [ "$codigo" -ne 0 ]; then
+            if grep -qE "HTTP 401|Falta el token" salida.txt; then
+              echo "::error::El token del INDEC falta, venció o es inválido. Generá uno nuevo en api.indec.gob.ar y actualizá el secreto INDEC_TOKEN."
+              exit 1
+            fi
+            # La API está en beta y a veces no responde: se reintenta en la próxima ejecución.
+            echo "::warning::La API del INDEC no respondió. Se reintenta en la próxima ejecución."
+            echo "cambios=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "cambios=$(sed -n 's/^CAMBIOS: *//p' salida.txt)" >> "$GITHUB_OUTPUT"
+
+      - name: Generar imágenes y textos
+        if: steps.datos.outputs.cambios != ''
+        env:
+          SITIO_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
+        run: python scripts/imagenes.py ${{ steps.datos.outputs.cambios }}
+
+      - name: Guardar cambios
+        if: steps.datos.outputs.cambios != ''
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs
+          git commit -m "Datos nuevos del INDEC: ${{ steps.datos.outputs.cambios }}"
+          git push
+
+      - name: Avisar con un issue
+        if: steps.datos.outputs.cambios != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          base="https://raw.githubusercontent.com/${{ github.repository }}/$(git rev-parse HEAD)/docs/"
+          sed "s|{BASE}|$base|g" novedades.md > cuerpo.md
+          gh issue create --title "Datos nuevos del INDEC: ${{ steps.datos.outputs.cambios }}" --body-file cuerpo.md
+
+  publicar:
+    needs: actualizar
+    if: needs.actualizar.outputs.cambios != ''
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    uses: ./.github/workflows/publicar.yml

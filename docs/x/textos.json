@@ -1,0 +1,37 @@
+{
+ "generado": "2026-11-03T13:31:42Z",
+ "items": [
+  {
+   "id": "inflacion",
+   "serie": "ipc",
+   "titulo": "Inflación de septiembre de 2026",
+   "imagen": "img/inflacion.png",
+   "alt": "Gráfico de barras de la inflación mensual. Septiembre de 2026: 1,9%.",
+   "texto": "Inflación de septiembre de 2026: 1,9% mensual (+0,2 p.p. contra agosto) y 33,4% interanual.\n\nFuente: INDEC\nhttps://tomigiudici-dev.github.io/monitor-macro"
+  },
+  {
+   "id": "salario_real",
+   "serie": "salarios",
+   "titulo": "Salario real de agosto de 2026",
+   "imagen": "img/salario_real.png",
+   "alt": "Gráfico de líneas del salario real por sector hasta agosto de 2026.",
+   "texto": "Salario real en agosto de 2026: +1,6% en doce meses y +1,1% contra julio. Índice de salarios del INDEC descontada la inflación.\n\nFuente: INDEC\nhttps://tomigiudici-dev.github.io/monitor-macro"
+  },
+  {
+   "id": "actividad",
+   "serie": "emae",
+   "titulo": "Actividad económica de agosto de 2026",
+   "imagen": "img/actividad.png",
+   "alt": "Gráfico de línea del EMAE desestacionalizado hasta agosto de 2026.",
+   "texto": "Actividad económica (EMAE) en agosto de 2026: −1,7% interanual y +0,1% contra julio, sin estacionalidad.\n\nFuente: INDEC\nhttps://tomigiudici-dev.github.io/monitor-macro"
+  },
+  {
+   "id": "desocupacion",
+   "serie": "desempleo",
+   "titulo": "Desocupación del 2.º trimestre de 2026",
+   "imagen": "img/desocupacion.png",
+   "alt": "Gráfico de barras de la desocupación trimestral. 2.º trimestre de 2026: 7,9%.",
+   "texto": "Desocupación del 2.º trimestre de 2026: 7,9%, +0,3 p.p. contra un año antes (EPH, 31 aglomerados urbanos).\n\nFuente: INDEC\nhttps://tomigiudici-dev.github.io/monitor-macro"
+  }
+ ]
+}
