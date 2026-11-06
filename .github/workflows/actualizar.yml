@@ -33,7 +33,7 @@ jobs:
       - name: Instalar dependencias
         run: pip install matplotlib==3.11.1
 
-      - name: Bajar datos del INDEC
+      - name: Bajar datos del INDEC y del BCRA
         id: datos
         env:
           INDEC_TOKEN: ${{ secrets.INDEC_TOKEN }}
@@ -75,7 +75,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add docs
-          git commit -m "Datos nuevos del INDEC: ${{ steps.datos.outputs.cambios }}"
+          git commit -m "Datos nuevos: ${{ steps.datos.outputs.cambios }}"
           git push
 
       - name: Avisar con un issue
@@ -85,7 +85,7 @@ jobs:
         run: |
           base="https://raw.githubusercontent.com/${{ github.repository }}/$(git rev-parse HEAD)/docs/"
           sed "s|{BASE}|$base|g" novedades.md > cuerpo.md
-          gh issue create --title "Datos nuevos del INDEC: ${{ steps.datos.outputs.cambios }}" --body-file cuerpo.md
+          gh issue create --title "Datos nuevos: ${{ steps.datos.outputs.cambios }}" --body-file cuerpo.md
 
   publicar:
     needs: actualizar

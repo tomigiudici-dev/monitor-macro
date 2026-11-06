@@ -401,7 +401,7 @@ def img_portada(inflacion, salario_real, actividad, desocupacion):
     logo(lz, 64, 52, 34, fondo="#FFFFFF", barras=S_PRIV)
     lz.texto(110, 79, "Monitor Macro", F["num_extra"], 26, "#FFFFFF")
     lz.texto(64, 176, "Inflación, salarios, actividad y empleo", F["num_extra"], 56, "#FFFFFF")
-    lz.texto(64, 222, "Con datos oficiales del INDEC, actualizados con cada publicación.", F["texto"], 23, GRIS_NAVY)
+    lz.texto(64, 222, "Con datos oficiales del INDEC y del BCRA, actualizados con cada publicación.", F["texto"], 23, GRIS_NAVY)
     tarjetas = (
         ("Inflación", mes(i["fecha"]), pct(i["mensual"]),
          [r["mensual"] for r in inflacion if r["mensual"] is not None][-24:]),
@@ -420,7 +420,7 @@ def img_portada(inflacion, salario_real, actividad, desocupacion):
         lz.texto(x + 22, 438, numero, F["num"], 50, "#FFFFFF")
         chispa(lz, x + 22, 470, serie)
     a = lz.texto(64, 590, "Fuente: ", F["texto"], 17, GRIS_NAVY)
-    b = lz.texto(64 + lz.ancho(a), 590, "INDEC", F["semi"], 17, "#FFFFFF")
+    b = lz.texto(64 + lz.ancho(a), 590, "INDEC y BCRA", F["semi"], 17, "#FFFFFF")
     lz.texto(64 + lz.ancho(a) + lz.ancho(b), 590, " · Sitio independiente", F["texto"], 17, GRIS_NAVY)
     if SITIO:
         lz.texto(1136, 590, SITIO.split("://")[-1], F["mono"], 17, CELESTE, ha="right")
@@ -507,7 +507,7 @@ def main():
 
     nuevos = [it for it in items if it["serie"] in cambios]
     with open(os.path.join(RAIZ, "novedades.md"), "w", encoding="utf-8") as fh:
-        fh.write("Hay datos nuevos del INDEC. Textos e imágenes listos para publicar:\n")
+        fh.write("Hay datos nuevos. Textos e imágenes listos para publicar:\n")
         for it in nuevos:
             fh.write(f"\n### {it['titulo']}\n\n```\n{it['texto']}\n```\n\n![{it['alt']}]({{BASE}}{it['imagen']})\n")
     for it in items:
