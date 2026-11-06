@@ -43,6 +43,7 @@
     }
   }
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
   body { margin: 0; background: var(--bg); color: var(--ink); font: 400 16px/1.5 var(--f-text); }
   a { color: var(--accent); }
   a:focus-visible, button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
@@ -169,6 +170,7 @@
       <a href="#salarios">Salarios</a>
       <a href="#actividad">Actividad</a>
       <a href="#empleo">Empleo</a>
+      <a href="#dinero">Dinero</a>
       <a href="#compartir">Compartir</a>
     </nav>
   </div>
@@ -251,11 +253,39 @@
     </article>
   </section>
 
+  <section class="card detail" id="dinero" data-dinero hidden>
+    <div class="detail-text">
+      <h2 class="title">Dinero y crédito</h2>
+      <p class="desc">Promedios mensuales del BCRA, descontada la inflación del INDEC. Diciembre de 2016 = 100.</p>
+      <ul class="legend">
+        <li><span class="sw" style="background: var(--s-total)"></span><span>Préstamos al sector privado</span><b data-k="din-prestamos">—</b></li>
+        <li><span class="sw" style="background: var(--s-priv)"></span><span>Depósitos</span><b data-k="din-depositos">—</b></li>
+        <li><span class="sw" style="background: var(--s-noreg)"></span><span>M2</span><b data-k="din-m2">—</b></li>
+        <li><span class="sw" style="background: var(--s-pub)"></span><span>Base monetaria</span><b data-k="din-base">—</b></li>
+      </ul>
+      <p class="foot">Variación real en doce meses, a <span data-k="din-mes">—</span></p>
+    </div>
+    <div class="detail-chart"><div class="chart" data-chart="dinero"></div></div>
+  </section>
+
+  <section class="pair" data-dinero hidden>
+    <article class="card" id="reservas">
+      <h2 class="title">Reservas internacionales</h2>
+      <p class="desc">Dato de fin de cada mes, en millones de dólares.</p>
+      <div class="chart" data-chart="reservas"></div>
+    </article>
+    <article class="card">
+      <h2 class="title">Crédito y dinero, variación real</h2>
+      <p class="desc">Variación en doce meses, descontada la inflación.</p>
+      <div class="chart" data-chart="dinero-ia"></div>
+    </article>
+  </section>
+
   <section class="share" id="compartir" aria-labelledby="compartir-titulo">
     <div class="share-head">
       <div>
         <h2 class="title" id="compartir-titulo">Para compartir en X</h2>
-        <p>Imagen y texto listos. Se regeneran solos cada vez que el INDEC publica un dato nuevo.</p>
+        <p>Imagen y texto listos. Se regeneran solos cada vez que hay un dato nuevo del INDEC o del BCRA.</p>
       </div>
       <div class="tabs" role="tablist" aria-label="Indicador" data-tabs></div>
     </div>
@@ -280,10 +310,11 @@
       <p><b>p.p.</b> son puntos porcentuales: la diferencia entre dos tasas. Pasar de 1,7% a 1,9% es +0,2 p.p.</p>
       <p><b>Sin estacionalidad</b> quiere decir que se quitaron los efectos que se repiten cada año, como las vacaciones o las cosechas.</p>
       <p><b>Salario real</b> es el salario descontada la inflación: si sube, alcanza para comprar más.</p>
+      <p><b>M2</b> es el efectivo en manos del público más los depósitos en cuenta corriente y caja de ahorro.</p>
     </div>
     <div class="col">
       <h2>Fuente</h2>
-      <p>INDEC, Catálogo API-INDEC (servicio en etapa beta). Las variaciones de inflación y de actividad son las que publica el INDEC. Se revisa los días hábiles a las 16:45 y 19:45.</p>
+      <p>INDEC, Catálogo API-INDEC (servicio en etapa beta), y BCRA, API de estadísticas monetarias. Las variaciones de inflación y de actividad son las que publica el INDEC. Se revisa los días hábiles a las 16:45 y 19:45.</p>
     </div>
     <div class="col">
       <h2>Sobre el sitio</h2>
@@ -302,6 +333,7 @@
     pct: nulo(loc.format('.1%')),
     spct: nulo(loc.format('+.1%')),
     num: nulo(loc.format(',.1f')),
+    entero: nulo(loc.format(',.0f')),
     pp: nulo((v) => (v > 0 ? '+' : v < 0 ? '−' : '') + loc.format('.1f')(Math.abs(v * 100)) + ' p.p.'),
     mes: (f) => { const [y, m] = f.split('-'); return `${MESES[m - 1]} ${y}`; },
     mesDe: (f) => { const [y, m] = f.split('-'); return `${MESES[m - 1]} de ${y}`; },
@@ -327,7 +359,23 @@
   });
   const opcional = (ruta) => cargar(ruta).catch(() => null);
 
-  const derivar = ({ ipc, salarios, emae, desempleo }) => {
+  // Agregados del BCRA en términos reales (deflactados por el IPC) y su variación en doce meses.
+  const COLUMNAS_DINERO = ['prestamos', 'depositos', 'm2', 'base'];
+  const derivarDinero = (dinero, precios) => {
+    const base = dinero && dinero.find((r) => r.fecha === '2016-12');
+    if (!base) return null;
+    const real = dinero.filter((r) => precios.has(r.fecha)).map((r) => ({
+      fecha: r.fecha,
+      ...Object.fromEntries(COLUMNAS_DINERO.map((c) => [c, (r[c] / base[c] / precios.get(r.fecha)) * 100])),
+    }));
+    const ia = real.slice(12).map((r, i) => ({
+      fecha: r.fecha,
+      ...Object.fromEntries(COLUMNAS_DINERO.map((c) => [c, r[c] / real[i][c] - 1])),
+    }));
+    return { real, ia, reservas: dinero.map((r) => ({ fecha: r.fecha, reservas: r.reservas })) };
+  };
+
+  const derivar = ({ ipc, salarios, emae, desempleo, dinero }) => {
     const inflacion = ipc.map((r) => ({
       fecha: r.fecha,
       mensual: r.v_m == null ? null : r.v_m / 100,
@@ -361,7 +409,7 @@
       emaeMes: a.fecha, emaePrev: ult(actividad, 2).fecha, emaeA: a.interanual, emaeM: a.mensual,
       desocTrim: d.fecha, desoc: d.tasa, desocDif: d.dif,
     };
-    return { inflacion, salarioReal, actividad, desocupacion, k };
+    return { inflacion, salarioReal, actividad, desocupacion, k, dinero: derivarDinero(dinero, precios) };
   };
 
   const poner = (clave, texto, clase) => {
@@ -370,6 +418,15 @@
       el.classList.remove('good', 'bad');
       if (clase) el.classList.add(clase);
     });
+  };
+
+  const llenarDinero = (dinero) => {
+    document.querySelectorAll('[data-dinero]').forEach((el) => { el.hidden = !dinero; });
+    if (!dinero) return;
+    const u = dinero.ia[dinero.ia.length - 1];
+    // Sin verde ni rojo: que el dinero caiga en términos reales no es bueno ni malo en sí mismo.
+    COLUMNAS_DINERO.forEach((c) => poner(`din-${c}`, fmt.spct(u[c])));
+    poner('din-mes', fmt.mesDe(u.fecha));
   };
 
   const llenarTextos = ({ k }, meta) => {
@@ -591,6 +648,13 @@
     { key: 'publico', nombre: 'Público', color: 'var(--s-pub)' },
   ];
 
+  const DINERO = [
+    { key: 'prestamos', nombre: 'Préstamos al sector privado', color: 'var(--s-total)', ancho: 3 },
+    { key: 'depositos', nombre: 'Depósitos', color: 'var(--s-priv)' },
+    { key: 'm2', nombre: 'M2', color: 'var(--s-noreg)' },
+    { key: 'base', nombre: 'Base monetaria', color: 'var(--s-pub)' },
+  ];
+
   const dibujos = {
     infl: (el, d) => barras(el, {
       etiqueta: 'Inflación mensual de los últimos 24 meses', alto: 260,
@@ -616,16 +680,35 @@
       eje: ejePct, fmtVal: fmt.pct, fmtX: fmt.trim,
       tip: (r) => [['Tasa', fmt.pct(r.tasa)], ['Contra un año antes', fmt.pp(r.dif)]],
     }),
+    dinero: (el, d) => lineas(el, {
+      id: 'dinero', etiqueta: 'Préstamos, depósitos, M2 y base monetaria en términos reales', alto: 280,
+      rows: recorte(d.dinero.real, 36), series: DINERO,
+      eje: ejeNum, fmtVal: fmt.num, fmtX: fmt.mesDe,
+      tip: (r) => DINERO.map((s) => [s.nombre, fmt.num(r[s.key]), s.color]),
+    }),
+    reservas: (el, d) => barras(el, {
+      etiqueta: 'Reservas internacionales a fin de cada mes', alto: 240,
+      rows: recorte(d.dinero.reservas, 36), key: 'reservas',
+      eje: ejeNum, fmtVal: fmt.entero, fmtX: fmt.mesDe,
+      tip: (r) => [['Reservas', `US$ ${fmt.entero(r.reservas)} millones`]],
+    }),
+    'dinero-ia': (el, d) => lineas(el, {
+      id: 'dinero-ia', etiqueta: 'Variación real en doce meses de préstamos y M2', alto: 240,
+      rows: recorte(d.dinero.ia, 36), series: [DINERO[0], DINERO[2]],
+      eje: ejePct, fmtVal: fmt.spct, fmtX: fmt.mesDe,
+      tip: (r) => [DINERO[0], DINERO[2]].map((s) => [s.nombre, fmt.spct(r[s.key]), s.color]),
+    }),
   };
 
   const dibujar = (d, cuales) => {
     document.querySelectorAll('[data-chart]').forEach((el) => {
+      if (el.closest('[hidden]')) return;
       if (!cuales || cuales.includes(el.dataset.chart)) dibujos[el.dataset.chart](el, d);
     });
   };
 
   // ---------- Para compartir ----------
-  const ETIQUETAS = { inflacion: 'Inflación', salario_real: 'Salario real', actividad: 'Actividad', desocupacion: 'Desocupación' };
+  const ETIQUETAS = { inflacion: 'Inflación', salario_real: 'Salario real', actividad: 'Actividad', desocupacion: 'Desocupación', dinero: 'Dinero y crédito' };
   const compartir = (textos) => {
     const seccion = document.getElementById('compartir');
     if (!textos || !textos.items || !textos.items.length) { seccion.hidden = true; return; }
@@ -675,10 +758,11 @@
   // ---------- Arranque ----------
   Promise.all([
     cargar('data/ipc.json'), cargar('data/salarios.json'), cargar('data/emae.json'), cargar('data/desempleo.json'),
-    opcional('data/meta.json'), opcional('x/textos.json'),
-  ]).then(([ipc, salarios, emae, desempleo, meta, textos]) => {
-    const d = derivar({ ipc, salarios, emae, desempleo });
+    opcional('data/meta.json'), opcional('x/textos.json'), opcional('data/dinero.json'),
+  ]).then(([ipc, salarios, emae, desempleo, meta, textos, dinero]) => {
+    const d = derivar({ ipc, salarios, emae, desempleo, dinero });
     llenarTextos(d, meta);
+    llenarDinero(d.dinero);
     sparks(d);
     dibujar(d);
     compartir(textos);
@@ -687,7 +771,7 @@
       b.addEventListener('click', () => {
         state.rango = b.dataset.rango;
         document.querySelectorAll('.range button').forEach((o) => o.setAttribute('aria-pressed', String(o === b)));
-        dibujar(d, ['sal', 'emae', 'desoc']);
+        dibujar(d, ['sal', 'emae', 'desoc', 'dinero', 'reservas', 'dinero-ia']);
       });
     });
 

@@ -110,7 +110,24 @@ def derivar():
     desocupacion = [{"fecha": r["fecha"], "tasa": r["tasa"],
                      "dif": r["tasa"] - desempleo[i - 4]["tasa"] if i >= 4 else None}
                     for i, r in enumerate(desempleo)]
-    return inflacion, salario_real, actividad, desocupacion
+    return inflacion, salario_real, actividad, desocupacion, derivar_dinero(precios)
+
+
+COLUMNAS_DINERO = ("prestamos", "depositos", "m2", "base")
+
+
+def derivar_dinero(precios):
+    """Agregados del BCRA deflactados por el IPC (dic. 2016 = 100). None si todavía no hay datos."""
+    try:
+        dinero = leer("dinero")
+    except OSError:
+        return None
+    base = next((r for r in dinero if r["fecha"] == "2016-12"), None)
+    if base is None:
+        return None
+    real = [{"fecha": r["fecha"], **{c: r[c] / base[c] / precios[r["fecha"]] * 100 for c in COLUMNAS_DINERO}}
+            for r in dinero if r["fecha"] in precios]
+    return {"real": real, "reservas": [(r["fecha"], r["reservas"]) for r in dinero]}
 
 
 # ---------- lienzo en píxeles ----------
@@ -261,7 +278,7 @@ def lineas(lz, caja, series, fechas, finales=None, area=False):
 
 # ---------- tarjeta para X (1200 × 675) ----------
 
-def tarjeta(nombre, eyebrow, periodo, numero, sub, filas, titulo, grafico):
+def tarjeta(nombre, eyebrow, periodo, numero, sub, filas, titulo, grafico, fuente=("INDEC", " · Catálogo API-INDEC")):
     lz = Lienzo(1200, 675, FONDO)
     logo(lz, 64, 52, 30)
     lz.texto(106, 75, "Monitor Macro", F["num_extra"], 22, TINTA)
@@ -292,8 +309,8 @@ def tarjeta(nombre, eyebrow, periodo, numero, sub, filas, titulo, grafico):
 
     lz.rect(0, 611, 1200, 64, TINTA, z=1)
     a = lz.texto(64, 650, "Fuente: ", F["texto"], 19, "#D6E3EE")
-    b = lz.texto(64 + lz.ancho(a), 650, "INDEC", F["semi"], 19, "#FFFFFF")
-    lz.texto(64 + lz.ancho(a) + lz.ancho(b), 650, " · Catálogo API-INDEC", F["texto"], 19, "#D6E3EE")
+    b = lz.texto(64 + lz.ancho(a), 650, fuente[0], F["semi"], 19, "#FFFFFF")
+    lz.texto(64 + lz.ancho(a) + lz.ancho(b), 650, fuente[1], F["texto"], 19, "#D6E3EE")
     if SITIO:
         lz.texto(1136, 650, SITIO.split("://")[-1], F["mono"], 19, CELESTE, ha="right")
     lz.guardar(nombre)
@@ -348,6 +365,25 @@ def img_desocupacion(desocupacion):
             lambda lz, caja: barras(lz, caja, [r["tasa"] for r in filas], [r["fecha"] for r in filas], "pct", pct(u["tasa"])))
 
 
+def img_dinero(dinero):
+    real = dinero["real"]
+    filas = real[-36:]
+    u, a = real[-1], real[-13]
+    ia = {c: u[c] / a[c] - 1 for c in COLUMNAS_DINERO}
+    series = [([r["prestamos"] for r in filas], TINTA, 3.5), ([r["depositos"] for r in filas], S_PRIV, 2.5),
+              ([r["m2"] for r in filas], S_NOREG, 2.5), ([r["base"] for r in filas], S_PUB, 2.5)]
+    nombres = ("Préstamos", "Depósitos", "M2", "Base mon.")
+    # Sin verde ni rojo: que el dinero caiga en términos reales no es bueno ni malo en sí mismo.
+    tarjeta("dinero.png", "Dinero y crédito · BCRA", mes(u["fecha"], True), pct(ia["prestamos"], True),
+            "préstamos privados, real interanual",
+            [(pct(ia["depositos"], True), "depósitos en doce meses", TINTA),
+             (pct(ia["m2"], True), "M2 en doce meses", TINTA)],
+            "Índices reales, diciembre 2016 = 100",
+            lambda lz, caja: lineas(lz, caja, series, [r["fecha"] for r in filas],
+                                    finales=[f"{n} {coma(s[0][-1])}" for n, s in zip(nombres, series)]),
+            fuente=("BCRA", " e INDEC"))
+
+
 # ---------- portada para links (1200 × 630) ----------
 
 def chispa(lz, x, y, valores):
@@ -393,8 +429,34 @@ def img_portada(inflacion, salario_real, actividad, desocupacion):
 
 # ---------- textos para X ----------
 
-def textos(inflacion, salario_real, actividad, desocupacion):
-    cierre = "\n\nFuente: INDEC" + (f"\n{SITIO}" if SITIO else "")
+def miles(v):
+    return f"{v:,.0f}".replace(",", ".")
+
+
+def texto_dinero(dinero, cierre):
+    real = dinero["real"]
+    u, a = real[-1], real[-13]
+    ia = {c: u[c] / a[c] - 1 for c in COLUMNAS_DINERO}
+    fecha_res, reservas = dinero["reservas"][-1]
+    return {"id": "dinero", "serie": "dinero", "titulo": f"Dinero y crédito a {mes(u['fecha'], True)}",
+            "imagen": "img/dinero.png",
+            "alt": f"Gráfico de líneas de préstamos, depósitos, M2 y base monetaria en términos reales hasta {mes(u['fecha'], True)}.",
+            "texto": (f"Préstamos al sector privado en {mes(u['fecha'], True)}: {pct(ia['prestamos'], True)} en doce meses, "
+                      f"descontada la inflación. Depósitos: {pct(ia['depositos'], True)}; M2: {pct(ia['m2'], True)}. "
+                      f"Reservas a fin de {mes(fecha_res, True)}: US$ {miles(reservas)} millones.") + cierre("BCRA e INDEC")}
+
+
+def textos(inflacion, salario_real, actividad, desocupacion, dinero=None):
+    def cierre(fuente):
+        return f"\n\nFuente: {fuente}" + (f"\n{SITIO}" if SITIO else "")
+
+    items = textos_indec(inflacion, salario_real, actividad, desocupacion, cierre("INDEC"))
+    if dinero:
+        items.append(texto_dinero(dinero, cierre))
+    return items
+
+
+def textos_indec(inflacion, salario_real, actividad, desocupacion, cierre):
     i, ip = inflacion[-1], inflacion[-2]
     s, sp, s12 = salario_real[-1], salario_real[-2], salario_real[-13]
     a, ap = actividad[-1], actividad[-2]
@@ -427,15 +489,17 @@ def textos(inflacion, salario_real, actividad, desocupacion):
 
 
 def main():
-    cambios = set(sys.argv[1:]) or {"ipc", "salarios", "emae", "desempleo"}
-    inflacion, salario_real, actividad, desocupacion = derivar()
+    cambios = set(sys.argv[1:]) or {"ipc", "salarios", "emae", "desempleo", "dinero"}
+    inflacion, salario_real, actividad, desocupacion, dinero = derivar()
     img_inflacion(inflacion)
     img_salario(salario_real)
     img_actividad(actividad)
     img_desocupacion(desocupacion)
+    if dinero:
+        img_dinero(dinero)
     img_portada(inflacion, salario_real, actividad, desocupacion)
 
-    items = textos(inflacion, salario_real, actividad, desocupacion)
+    items = textos(inflacion, salario_real, actividad, desocupacion, dinero)
     ahora = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     os.makedirs(X, exist_ok=True)
     with open(os.path.join(X, "textos.json"), "w", encoding="utf-8") as fh:

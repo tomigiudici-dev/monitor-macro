@@ -1,12 +1,12 @@
 # Monitor Macro
 
-Sitio público con inflación, salario real, actividad económica y desocupación de la Argentina, con datos del [Catálogo API-INDEC](https://api.indec.gob.ar/). Se actualiza solo y genera imágenes y textos listos para publicar en X.
+Sitio público con inflación, salario real, actividad económica, desocupación, dinero y crédito de la Argentina, con datos del [Catálogo API-INDEC](https://api.indec.gob.ar/) y de la [API de estadísticas del BCRA](https://api.bcra.gob.ar/). Se actualiza solo y genera imágenes y textos listos para publicar en X.
 
-Sitio independiente, sin relación con el INDEC. Fuente de los datos: INDEC.
+Sitio independiente, sin relación con el INDEC ni con el BCRA. Fuentes de los datos: INDEC y BCRA.
 
 ## Cómo funciona
 
-- `scripts/datos.py` baja las series de la API del INDEC y las guarda en `docs/data/`.
+- `scripts/datos.py` baja las series de la API del INDEC y de la del BCRA, y las guarda en `docs/data/`. La del BCRA es pública y no pide token; si no responde, se conservan sus datos anteriores sin frenar la actualización del INDEC.
 - `scripts/imagenes.py` genera las imágenes de `docs/img/` y los textos sugeridos de `docs/x/textos.json`.
 - `docs/index.html` es la página. Lee los JSON y dibuja los gráficos en el navegador.
 - El flujo **Actualizar datos** (`.github/workflows/actualizar.yml`) corre los días hábiles a las 16:45 y 19:45 (hora argentina). Si el INDEC publicó algo nuevo, guarda los datos, regenera las imágenes, publica el sitio y abre un issue con los textos e imágenes para X.
@@ -36,6 +36,7 @@ python -m http.server --directory docs
 - Las variaciones de inflación y de actividad son las que publica el INDEC.
 - El salario real es el índice de salarios de cada sector dividido por el IPC nacional, con base diciembre de 2016 = 100.
 - La desocupación es la tasa trimestral de la EPH para el total de 31 aglomerados urbanos.
+- Dinero y crédito (BCRA): promedios mensuales de los datos diarios de base monetaria, M2, depósitos y préstamos al sector privado, divididos por el IPC (diciembre de 2016 = 100); las reservas son el dato de fin de mes, en millones de dólares. Solo se toman meses completos, y un mes nuevo es lo único que cuenta como novedad, porque el BCRA revisa seguido los datos diarios.
 
 ## Tipografías
 

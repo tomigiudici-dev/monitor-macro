@@ -1,7 +1,7 @@
-"""Descarga las series del Catálogo API-INDEC y las guarda como JSON en docs/data/.
+"""Descarga las series del Catálogo API-INDEC y del BCRA y las guarda como JSON en docs/data/.
 
-Necesita el token del INDEC (variable INDEC_TOKEN o archivo ~/indec_token.txt).
-Imprime una línea por serie con "ACTUALIZADO" o "sin cambios", y al final
+Necesita el token del INDEC (variable INDEC_TOKEN o archivo ~/indec_token.txt); la API del
+BCRA es pública. Imprime una línea por serie con "ACTUALIZADO" o "sin cambios", y al final
 "CAMBIOS: <series>" para que el flujo de GitHub sepa qué cambió.
 
     python scripts/datos.py
@@ -11,6 +11,7 @@ import datetime
 import json
 import os
 
+from bcra_api import ErrorBCRA, serie
 from indec_api import a_numero, consultar
 
 DESDE = "2016-10"
@@ -89,6 +90,42 @@ def desempleo():
     return sorted((r for r in out if r["fecha"] >= DESDE), key=lambda r: r["fecha"])
 
 
+# Variables del BCRA: columna -> (id en la API, cómo se pasa de datos diarios a mensuales)
+DINERO = {
+    "base": (15, "promedio"),        # base monetaria, millones de pesos
+    "m2": (109, "promedio"),         # M2, millones de pesos
+    "depositos": (21, "promedio"),   # depósitos en las entidades financieras, millones de pesos
+    "prestamos": (26, "promedio"),   # préstamos al sector privado, millones de pesos
+    "reservas": (1, "fin"),          # reservas internacionales, millones de dólares, último dato del mes
+}
+
+
+def dinero():
+    """Promedios mensuales de las series diarias del BCRA (reservas: fin de mes). Solo meses completos."""
+    hasta = datetime.date.today().isoformat()
+    por_mes = {}
+    for col, (id_variable, _) in DINERO.items():
+        for fecha, valor in serie(id_variable, "2016-12-01", hasta):
+            por_mes.setdefault(fecha[:7], {}).setdefault(col, []).append(valor)
+    en_curso = max(por_mes)  # el mes del último dato todavía no terminó
+    filas = []
+    for mes in sorted(m for m in por_mes if m < en_curso):
+        fila = {"fecha": mes}
+        for col, (_, modo) in DINERO.items():
+            v = por_mes[mes].get(col)
+            fila[col] = None if not v else round(v[-1] if modo == "fin" else sum(v) / len(v), 1)
+        filas.append(fila)
+    return filas
+
+
+def ultimo_periodo(nombre):
+    try:
+        with open(os.path.join(SALIDA, f"{nombre}.json"), encoding="utf-8") as fh:
+            return json.load(fh)[-1]["fecha"]
+    except (OSError, ValueError, IndexError, KeyError):
+        return None
+
+
 def guardar(nombre, contenido):
     """Escribe el archivo solo si cambió. Devuelve True si lo actualizó."""
     ruta = os.path.join(SALIDA, f"{nombre}.json")
@@ -109,9 +146,16 @@ def main():
     # Baja todo antes de escribir: si la API falla a mitad de camino, no queda nada a medio actualizar.
     datos = {nombre: bajar() for nombre, bajar in
              (("ipc", ipc), ("salarios", salarios), ("emae", emae), ("desempleo", desempleo))}
+    try:
+        datos["dinero"] = dinero()
+    except ErrorBCRA as e:
+        # Un problema del BCRA no frena la actualización del INDEC: quedan los datos anteriores.
+        print(f"::warning::{e}. Se mantienen los datos anteriores del BCRA.")
     cambios = []
     for nombre, filas in datos.items():
-        if guardar(nombre, filas):
+        # Las series diarias del BCRA se revisan seguido: cuenta como novedad solo un mes nuevo.
+        mes_nuevo = ultimo_periodo(nombre) != filas[-1]["fecha"]
+        if guardar(nombre, filas) and (nombre != "dinero" or mes_nuevo):
             cambios.append(nombre)
         estado = "ACTUALIZADO" if nombre in cambios else "sin cambios"
         print(f"{nombre}.json: {estado}, {len(filas)} filas, {filas[0]['fecha']} a {filas[-1]['fecha']}")

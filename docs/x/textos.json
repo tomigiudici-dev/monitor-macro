@@ -1,5 +1,5 @@
 {
- "generado": "2026-11-03T14:18:49Z",
+ "generado": "2026-11-06T14:41:37Z",
  "items": [
   {
    "id": "inflacion",
@@ -32,6 +32,14 @@
    "imagen": "img/desocupacion.png",
    "alt": "Gráfico de barras de la desocupación trimestral. 2.º trimestre de 2026: 7,9%.",
    "texto": "Desocupación del 2.º trimestre de 2026: 7,9%, +0,3 p.p. contra un año antes (EPH, 31 aglomerados urbanos).\n\nFuente: INDEC\nhttps://tomigiudici-dev.github.io/monitor-macro"
+  },
+  {
+   "id": "dinero",
+   "serie": "dinero",
+   "titulo": "Dinero y crédito a septiembre de 2026",
+   "imagen": "img/dinero.png",
+   "alt": "Gráfico de líneas de préstamos, depósitos, M2 y base monetaria en términos reales hasta septiembre de 2026.",
+   "texto": "Préstamos al sector privado en septiembre de 2026: +2,6% en doce meses, descontada la inflación. Depósitos: −0,7%; M2: −8,2%. Reservas a fin de octubre de 2026: US$ 48.565 millones.\n\nFuente: BCRA e INDEC\nhttps://tomigiudici-dev.github.io/monitor-macro"
   }
  ]
 }
