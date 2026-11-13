@@ -1,13 +1,13 @@
 {
- "generado": "2026-11-06T22:03:40Z",
+ "generado": "2026-11-13T00:41:36Z",
  "items": [
   {
    "id": "inflacion",
    "serie": "ipc",
-   "titulo": "Inflación de septiembre de 2026",
+   "titulo": "Inflación de octubre de 2026",
    "imagen": "img/inflacion.png",
-   "alt": "Gráfico de barras de la inflación mensual. Septiembre de 2026: 1,9%.",
-   "texto": "Inflación de septiembre de 2026: 1,9% mensual (+0,2 p.p. contra agosto) y 33,4% interanual.\n\nFuente: INDEC\nhttps://tomigiudici-dev.github.io/monitor-macro"
+   "alt": "Gráfico de barras de la inflación mensual. Octubre de 2026: 2,2%.",
+   "texto": "Inflación de octubre de 2026: 2,2% mensual (+0,3 p.p. contra septiembre) y 33,1% interanual.\n\nFuente: INDEC\nhttps://tomigiudici-dev.github.io/monitor-macro"
   },
   {
    "id": "salario_real",
@@ -36,10 +36,10 @@
   {
    "id": "dinero",
    "serie": "dinero",
-   "titulo": "Dinero y crédito a septiembre de 2026",
+   "titulo": "Dinero y crédito a octubre de 2026",
    "imagen": "img/dinero.png",
-   "alt": "Gráfico de líneas de préstamos, depósitos, M2 y base monetaria en términos reales hasta septiembre de 2026.",
-   "texto": "Préstamos al sector privado en septiembre de 2026: +2,6% en doce meses, descontada la inflación. Depósitos: −0,7%; M2: −8,2%. Reservas a fin de octubre de 2026: US$ 48.565 millones.\n\nFuente: BCRA e INDEC\nhttps://tomigiudici-dev.github.io/monitor-macro"
+   "alt": "Gráfico de líneas de préstamos, depósitos, M2 y base monetaria en términos reales hasta octubre de 2026.",
+   "texto": "Préstamos al sector privado en octubre de 2026: +1,6% en doce meses, descontada la inflación. Depósitos: −0,9%; M2: −8,9%. Reservas a fin de octubre de 2026: US$ 48.565 millones.\n\nFuente: BCRA e INDEC\nhttps://tomigiudici-dev.github.io/monitor-macro"
   }
  ]
 }
