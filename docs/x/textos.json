@@ -1,5 +1,5 @@
 {
- "generado": "2026-11-13T00:41:36Z",
+ "generado": "2026-11-14T00:28:51Z",
  "items": [
   {
    "id": "inflacion",
@@ -12,10 +12,10 @@
   {
    "id": "salario_real",
    "serie": "salarios",
-   "titulo": "Salario real de agosto de 2026",
+   "titulo": "Salario real de septiembre de 2026",
    "imagen": "img/salario_real.png",
-   "alt": "Gráfico de líneas del salario real por sector hasta agosto de 2026.",
-   "texto": "Salario real en agosto de 2026: +1,6% en doce meses y +1,1% contra julio. Índice de salarios del INDEC descontada la inflación.\n\nFuente: INDEC\nhttps://tomigiudici-dev.github.io/monitor-macro"
+   "alt": "Gráfico de líneas del salario real por sector hasta septiembre de 2026.",
+   "texto": "Salario real en septiembre de 2026: +0,7% en doce meses y −0,7% contra agosto. Índice de salarios del INDEC descontada la inflación.\n\nFuente: INDEC\nhttps://tomigiudici-dev.github.io/monitor-macro"
   },
   {
    "id": "actividad",
