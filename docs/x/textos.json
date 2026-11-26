@@ -1,5 +1,5 @@
 {
- "generado": "2026-11-14T00:28:51Z",
+ "generado": "2026-11-26T02:26:26Z",
  "items": [
   {
    "id": "inflacion",
@@ -20,10 +20,10 @@
   {
    "id": "actividad",
    "serie": "emae",
-   "titulo": "Actividad económica de agosto de 2026",
+   "titulo": "Actividad económica de septiembre de 2026",
    "imagen": "img/actividad.png",
-   "alt": "Gráfico de línea del EMAE desestacionalizado hasta agosto de 2026.",
-   "texto": "Actividad económica (EMAE) en agosto de 2026: −1,7% interanual y +0,1% contra julio, sin estacionalidad.\n\nFuente: INDEC\nhttps://tomigiudici-dev.github.io/monitor-macro"
+   "alt": "Gráfico de línea del EMAE desestacionalizado hasta septiembre de 2026.",
+   "texto": "Actividad económica (EMAE) en septiembre de 2026: −1,2% interanual y +1,1% contra agosto, sin estacionalidad.\n\nFuente: INDEC\nhttps://tomigiudici-dev.github.io/monitor-macro"
   },
   {
    "id": "desocupacion",
